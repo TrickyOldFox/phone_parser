@@ -20,7 +20,7 @@ regex = r'[\+\(]?[0-9]{1,3}[\s.\-\(\)]{0,3}[0-9]{2,3}[\s.\-\(\)]{0,3}[0-9]{2}[\s
 client = TelegramClient('anon', api_id, api_hash)
 
 def parse_message(message):
-	text = message.message + 'n'
+	text = str(message.message) + 'n'
 	number = ''
 	fails = 0
 	phones = re.findall(regex, text)
@@ -64,30 +64,32 @@ async def main():
 	dialogs = []
 	
 	async for dialog in client.iter_dialogs():
-		dialog_id = 459878125
-		if dialog.id == dialog_id:
-			dialogs.append({
+		dialog_id = -1001459974149
+		dialogs.append({
 			'id': dialog.id,
 			'name': dialog.name
 			})
+		if dialog.id == dialog_id:
 			try:
-				async for user in client.iter_participants("me"):
+				async for user in client.iter_participants(dialog):
 					if user.username and user.phone:
 						user_dict = {}
 						user_dict['username'] = user.username
-						user_dict['phone'] = user.phone
+						user_dict['phone'] = [user.phone]
 						user_dict['first_name'] = user.first_name
 						user_dict['last_name'] = user.last_name
 						users.append(user_dict)
-				async for message in client.iter_messages("me"):
+				async for message in client.iter_messages(dialog, limit=500):
 					valid, phone = parse_message(message)
 					if valid:
-						user = await client.get_entity(message.peer_id.user_id)
+						user_id = message.from_id.user_id if hasattr(message.from_id, 'user_id') else \
+							message.from_id
+						user = await client.get_entity(user_id)
 						user_dict = {
 							'username': user.username,
 							'phone': phone,
-							'first_name': user.first_name,
-							'last_name': user.last_name
+							'first_name': user.first_name if hasattr(user, 'first_name') else None,
+							'last_name': user.last_name if hasattr(user, 'last_name') else None
 						}
 						users.append(user_dict)
 			except:
@@ -95,6 +97,14 @@ async def main():
 	if users:
 		with open('users.csv', 'w', encoding='utf8') as csv_file:
 			csv_writer = csv.DictWriter(csv_file, users[0].keys())
+			for user in users:
+				csv_phone = ''
+				for phone in user['phone']:
+					if csv_phone:
+						csv_phone += '   ' + str(phone)
+					else:
+						csv_phone += str(phone)
+				user['phone'] = csv_phone
 			csv_writer.writerows(users)
 		with open('users.json', 'w', encoding='utf8') as outfile:
 			json.dump(users, outfile, ensure_ascii=False)
