@@ -8,6 +8,7 @@ Created on Thu Dec 17 01:20:22 2020
 import json
 import csv
 import phonenumbers
+from settings import *
 
 from telethon.sync import TelegramClient
 from pprint import pprint
@@ -15,10 +16,6 @@ from pprint import pprint
 import re
 
 regex = r'[\+\(]?[0-9]{1,3}[\s.\-\(\)]{0,3}[0-9]{2,3}[\s.\-\(\)]{0,3}[0-9]{2}[\s.\-\(\)]{0,3}[0-9]{0,3}[\s.\-\(\)]{0,3}[0-9]{2,3}[\D]'
-
-
-api_id = "2285328"
-api_hash = "7471457a2752f26eb72f5e957d370596"
 
 client = TelegramClient('anon', api_id, api_hash)
 
@@ -40,7 +37,6 @@ def parse_message(message):
 				cleared_phones.append(f'+{cleared_phone}')
 	for phone in cleared_phones:
 		try:
-			country_codes = [None, 'UA']
 			counter = 0
 			while True:
 				if counter == 0 and phone[0] != '+':
@@ -53,7 +49,6 @@ def parse_message(message):
 					number = phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.E164)
 					if number not in valid_phones:
 						valid_phones.append(number)
-					print(cleared_phones, phone, valid_phones)
 					break
 				counter += 1
 		except:
