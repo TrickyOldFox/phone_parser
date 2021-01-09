@@ -15,9 +15,17 @@ from pprint import pprint
 
 import re
 
+with open('dialogs_to_parse.csv', mode='r') as infile:
+	DIALOGS_TO_PARSE = []
+	reader = csv.DictReader(infile, fieldnames=['id', 'name'])
+	for row in reader:
+		DIALOGS_TO_PARSE.append(int(row['id']))
+	print(DIALOGS_TO_PARSE)
+
+
 regex = r'[\+\(]?[0-9]{1,3}[\s.\-\(\)]{0,3}[0-9]{2,3}[\s.\-\(\)]{0,3}[0-9]{2}[\s.\-\(\)]{0,3}[0-9]{0,3}[\s.\-\(\)]{0,3}[0-9]{2,3}[\D]'
 
-client = TelegramClient('anon', api_id, api_hash)
+client = TelegramClient('anon', API_ID, API_HASH)
 
 def parse_message(message):
 	text = str(message.message) + 'n'
@@ -39,12 +47,12 @@ def parse_message(message):
 		try:
 			counter = 0
 			while True:
-				if counter == 0 and phone[0] != '+':
+				if not COUNTRY_CODES[counter] and phone[0] != '+':
 					counter += 1
 					continue
-				if counter == len(country_codes):
+				if counter == len(COUNTRY_CODES):
 					break
-				number = phonenumbers.parse(phone, country_codes[counter])
+				number = phonenumbers.parse(phone, COUNTRY_CODES[counter])
 				if phonenumbers.is_possible_number(number):
 					number = phonenumbers.format_number(number, phonenumbers.PhoneNumberFormat.E164)
 					if number not in valid_phones:
@@ -64,12 +72,11 @@ async def main():
 	dialogs = []
 	
 	async for dialog in client.iter_dialogs():
-		dialog_id = -1001459974149
 		dialogs.append({
 			'id': dialog.id,
 			'name': dialog.name
 			})
-		if dialog.id == dialog_id:
+		if dialog.id in DIALOGS_TO_PARSE:
 			try:
 				async for user in client.iter_participants(dialog):
 					if user.username and user.phone:
@@ -79,11 +86,16 @@ async def main():
 						user_dict['first_name'] = user.first_name
 						user_dict['last_name'] = user.last_name
 						users.append(user_dict)
-				async for message in client.iter_messages(dialog, limit=500):
-					valid, phone = parse_message(message)
-					if valid:
-						user_id = message.from_id.user_id if hasattr(message.from_id, 'user_id') else \
-							message.from_id
+			except:
+				print('Not enough privileges')
+			counter = 0
+			async for message in client.iter_messages(dialog, limit=MESSAGE_LIMIT):
+				counter += 1
+				valid, phone = parse_message(message)
+				if valid:
+					user_id = message.from_id.user_id if hasattr(message.from_id, 'user_id') else \
+						message.from_id
+					if user_id:
 						user = await client.get_entity(user_id)
 						user_dict = {
 							'username': user.username,
@@ -92,8 +104,7 @@ async def main():
 							'last_name': user.last_name if hasattr(user, 'last_name') else None
 						}
 						users.append(user_dict)
-			except:
-				pass
+			print(counter)
 	if users:
 		with open('users.csv', 'w', encoding='utf8') as csv_file:
 			csv_writer = csv.DictWriter(csv_file, users[0].keys())
@@ -108,8 +119,9 @@ async def main():
 			csv_writer.writerows(users)
 		with open('users.json', 'w', encoding='utf8') as outfile:
 			json.dump(users, outfile, ensure_ascii=False)
-	with open('dialogs.json', 'w', encoding='utf8') as outfile:
-		json.dump(dialogs, outfile, ensure_ascii=False)
+	with open('dialogs.csv', 'w', encoding='utf8') as csv_file:
+		csv_writer = csv.DictWriter(csv_file, dialogs[0].keys())
+		csv_writer.writerows(dialogs)
 
 with client:
     client.loop.run_until_complete(main())
