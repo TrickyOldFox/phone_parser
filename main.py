@@ -14,13 +14,16 @@ from telethon.sync import TelegramClient
 from pprint import pprint
 
 import re
-
-with open('dialogs_to_parse.csv', mode='r') as infile:
-	DIALOGS_TO_PARSE = []
-	reader = csv.DictReader(infile, fieldnames=['id', 'name'])
-	for row in reader:
-		DIALOGS_TO_PARSE.append(int(row['id']))
-	print(DIALOGS_TO_PARSE)
+try:
+	with open('dialogs_to_parse.csv', mode='r', encoding='UTF-8') as infile:
+		DIALOGS_TO_PARSE = []
+		reader = csv.DictReader(infile, fieldnames=['id', 'name'])
+		for row in reader:
+			DIALOGS_TO_PARSE.append(int(row['id']))
+except Exception as e:
+	print(e)
+	DIALOGS_TO_PARSE=[]
+print(DIALOGS_TO_PARSE)
 
 
 regex = r'[\+\(]?[0-9]{1,3}[\s.\-\(\)]{0,3}[0-9]{2,3}[\s.\-\(\)]{0,3}[0-9]{2}[\s.\-\(\)]{0,3}[0-9]{0,3}[\s.\-\(\)]{0,3}[0-9]{2,3}[\D]'
